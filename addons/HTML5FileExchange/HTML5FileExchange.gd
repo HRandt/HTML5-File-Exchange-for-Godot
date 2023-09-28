@@ -3,17 +3,18 @@ extends Node
 signal read_completed
 signal load_completed(image)
 
-var js_callback = JavaScript.create_callback(self, "load_handler");
+#var callable = Callable(self, "load_handler")
+var js_callback = JavaScriptBridge.create_callback(load_handler)
 var js_interface;
 
 func _ready():
 	if OS.get_name() == "HTML5" and OS.has_feature('JavaScript'):
 		_define_js()
-		js_interface = JavaScript.get_interface("_HTML5FileExchange");
+		js_interface = JavaScriptBridge.get_interface("_HTML5FileExchange")
 
 func _define_js()->void:
 	#Define JS script
-	JavaScript.eval("""
+	JavaScriptBridge.eval("""
 	var _HTML5FileExchange = {};
 	_HTML5FileExchange.upload = function(gd_callback) {
 		canceled = true;
@@ -48,10 +49,11 @@ func load_image():
 
 	js_interface.upload(js_callback);
 
-	yield(self, "read_completed")
+	#yield(self, "read_completed")
+	await self.read_completed
 	
 	var imageType = js_interface.fileType;
-	var imageData = JavaScript.eval("_HTML5FileExchange.result", true) # interface doesn't work as expected for some reason
+	var imageData = JavaScriptBridge.eval("_HTML5FileExchange.result", true) # interface doesn't work as expected for some reason
 	
 	var image = Image.new()
 	var image_error
@@ -77,4 +79,4 @@ func save_image(image:Image, fileName:String = "export.png")->void:
 	
 	image.clear_mipmaps()
 	var buffer = image.save_png_to_buffer()
-	JavaScript.download_buffer(buffer, fileName)
+	JavaScriptBridge.download_buffer(buffer, fileName)
